@@ -1,0 +1,412 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>ヒットアンドブロー</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      font-family: 'Segoe UI', sans-serif;
+      background: linear-gradient(135deg, #1a1a2e, #16213e, #0f3460);
+      min-height: 100vh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: #fff;
+    }
+
+    .container {
+      width: 100%;
+      max-width: 480px;
+      padding: 20px;
+    }
+
+    h1 {
+      text-align: center;
+      font-size: 2rem;
+      margin-bottom: 4px;
+      background: linear-gradient(90deg, #f7971e, #ffd200);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+    }
+
+    .subtitle {
+      text-align: center;
+      font-size: 0.85rem;
+      color: #aaa;
+      margin-bottom: 24px;
+    }
+
+    .rules {
+      background: rgba(255,255,255,0.07);
+      border-radius: 12px;
+      padding: 14px 18px;
+      margin-bottom: 20px;
+      font-size: 0.85rem;
+      line-height: 1.8;
+      color: #ccc;
+    }
+
+    .rules span.hit  { color: #f7971e; font-weight: bold; }
+    .rules span.blow { color: #56ccf2; font-weight: bold; }
+
+    .input-area {
+      display: flex;
+      gap: 10px;
+      margin-bottom: 16px;
+    }
+
+    .digits {
+      display: flex;
+      gap: 8px;
+      flex: 1;
+    }
+
+    .digits input {
+      width: 100%;
+      height: 56px;
+      text-align: center;
+      font-size: 1.6rem;
+      font-weight: bold;
+      border: 2px solid rgba(255,255,255,0.2);
+      border-radius: 10px;
+      background: rgba(255,255,255,0.1);
+      color: #fff;
+      outline: none;
+      transition: border-color 0.2s;
+    }
+
+    .digits input:focus {
+      border-color: #ffd200;
+    }
+
+    button#guess-btn {
+      padding: 0 20px;
+      height: 56px;
+      border: none;
+      border-radius: 10px;
+      background: linear-gradient(135deg, #f7971e, #ffd200);
+      color: #1a1a2e;
+      font-size: 1rem;
+      font-weight: bold;
+      cursor: pointer;
+      transition: opacity 0.2s, transform 0.1s;
+      white-space: nowrap;
+    }
+
+    button#guess-btn:hover  { opacity: 0.9; }
+    button#guess-btn:active { transform: scale(0.97); }
+
+    .error-msg {
+      color: #ff6b6b;
+      font-size: 0.85rem;
+      min-height: 20px;
+      margin-bottom: 8px;
+      text-align: center;
+    }
+
+    .history {
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+      max-height: 340px;
+      overflow-y: auto;
+    }
+
+    .history-row {
+      display: flex;
+      align-items: center;
+      background: rgba(255,255,255,0.07);
+      border-radius: 10px;
+      padding: 10px 16px;
+      gap: 12px;
+      animation: fadeIn 0.3s ease;
+    }
+
+    @keyframes fadeIn {
+      from { opacity: 0; transform: translateY(-6px); }
+      to   { opacity: 1; transform: translateY(0); }
+    }
+
+    .row-num {
+      font-size: 0.75rem;
+      color: #666;
+      width: 24px;
+      text-align: center;
+    }
+
+    .row-guess {
+      display: flex;
+      gap: 6px;
+    }
+
+    .digit-box {
+      width: 36px;
+      height: 36px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 1.2rem;
+      font-weight: bold;
+      border-radius: 8px;
+      background: rgba(255,255,255,0.12);
+    }
+
+    .digit-box.hit  { background: rgba(247,151,30,0.35); color: #ffd200; }
+    .digit-box.blow { background: rgba(86,204,242,0.25); color: #56ccf2; }
+
+    .row-result {
+      margin-left: auto;
+      display: flex;
+      gap: 16px;
+      font-size: 0.9rem;
+    }
+
+    .row-result .hit-count  { color: #ffd200; }
+    .row-result .blow-count { color: #56ccf2; }
+
+    .result-badge {
+      font-size: 0.7rem;
+      font-weight: bold;
+      padding: 2px 8px;
+      border-radius: 20px;
+    }
+
+    /* Win / Game over overlay */
+    .overlay {
+      display: none;
+      position: fixed;
+      inset: 0;
+      background: rgba(0,0,0,0.7);
+      align-items: center;
+      justify-content: center;
+      z-index: 10;
+    }
+
+    .overlay.show { display: flex; }
+
+    .overlay-box {
+      background: #16213e;
+      border-radius: 20px;
+      padding: 36px 40px;
+      text-align: center;
+      max-width: 340px;
+      width: 90%;
+      border: 1px solid rgba(255,255,255,0.1);
+    }
+
+    .overlay-box h2 {
+      font-size: 2.2rem;
+      margin-bottom: 12px;
+    }
+
+    .overlay-box p {
+      color: #aaa;
+      margin-bottom: 6px;
+      font-size: 0.95rem;
+    }
+
+    .overlay-box .answer {
+      font-size: 2rem;
+      font-weight: bold;
+      letter-spacing: 10px;
+      margin: 16px 0;
+      background: linear-gradient(90deg, #f7971e, #ffd200);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+    }
+
+    button#retry-btn {
+      margin-top: 16px;
+      padding: 12px 32px;
+      border: none;
+      border-radius: 10px;
+      background: linear-gradient(135deg, #f7971e, #ffd200);
+      color: #1a1a2e;
+      font-size: 1rem;
+      font-weight: bold;
+      cursor: pointer;
+    }
+  </style>
+</head>
+<body>
+
+<div class="container">
+  <h1>🎯 ヒット＆ブロー</h1>
+  <p class="subtitle">異なる4つの数字を当てよう！</p>
+
+  <div class="rules">
+    <span class="hit">● ヒット</span>：数字も位置もピッタリ<br>
+    <span class="blow">● ブロー</span>：数字は合ってるけど位置が違う<br>
+    ※ 4桁すべて異なる数字を使います（0〜9）
+  </div>
+
+  <div class="input-area">
+    <div class="digits">
+      <input type="text" maxlength="1" inputmode="numeric" id="d0">
+      <input type="text" maxlength="1" inputmode="numeric" id="d1">
+      <input type="text" maxlength="1" inputmode="numeric" id="d2">
+      <input type="text" maxlength="1" inputmode="numeric" id="d3">
+    </div>
+    <button id="guess-btn">判定！</button>
+  </div>
+
+  <div class="error-msg" id="error-msg"></div>
+
+  <div class="history" id="history"></div>
+</div>
+
+<!-- Result overlay -->
+<div class="overlay" id="overlay">
+  <div class="overlay-box">
+    <h2 id="overlay-title"></h2>
+    <p id="overlay-msg"></p>
+    <div class="answer" id="overlay-answer"></div>
+    <button id="retry-btn">もう一度遊ぶ</button>
+  </div>
+</div>
+
+<script>
+  const MAX_TRIES = 10;
+
+  let secret = [];
+  let tries = 0;
+  let gameOver = false;
+
+  const inputs   = [0,1,2,3].map(i => document.getElementById('d' + i));
+  const guessBtn = document.getElementById('guess-btn');
+  const errorMsg = document.getElementById('error-msg');
+  const history  = document.getElementById('history');
+  const overlay  = document.getElementById('overlay');
+
+  function generateSecret() {
+    const digits = [];
+    while (digits.length < 4) {
+      const n = Math.floor(Math.random() * 10).toString();
+      if (!digits.includes(n)) digits.push(n);
+    }
+    return digits;
+  }
+
+  function startGame() {
+    secret   = generateSecret();
+    tries    = 0;
+    gameOver = false;
+    history.innerHTML = '';
+    errorMsg.textContent = '';
+    inputs.forEach(el => { el.value = ''; el.disabled = false; });
+    guessBtn.disabled = false;
+    overlay.classList.remove('show');
+    inputs[0].focus();
+    // console.log('secret:', secret.join('')); // デバッグ用
+  }
+
+  function getGuess() {
+    return inputs.map(el => el.value.trim());
+  }
+
+  function validate(guess) {
+    if (guess.some(d => !/^\d$/.test(d))) return '4つの数字（0〜9）を入力してください';
+    if (new Set(guess).size !== 4)        return '4つすべて異なる数字にしてください';
+    return null;
+  }
+
+  function judge(guess) {
+    let hit = 0, blow = 0;
+    guess.forEach((d, i) => {
+      if (d === secret[i])        hit++;
+      else if (secret.includes(d)) blow++;
+    });
+    return { hit, blow };
+  }
+
+  function addHistory(guess, hit, blow) {
+    const row = document.createElement('div');
+    row.className = 'history-row';
+
+    const num = document.createElement('div');
+    num.className = 'row-num';
+    num.textContent = tries;
+
+    const boxes = document.createElement('div');
+    boxes.className = 'row-guess';
+    guess.forEach((d) => {
+      const box = document.createElement('div');
+      box.className = 'digit-box';
+      box.textContent = d;
+      boxes.appendChild(box);
+    });
+
+    const result = document.createElement('div');
+    result.className = 'row-result';
+    result.innerHTML = `
+      <span class="hit-count">🟠 ${hit}ヒット</span>
+      <span class="blow-count">🔵 ${blow}ブロー</span>
+    `;
+
+    row.appendChild(num);
+    row.appendChild(boxes);
+    row.appendChild(result);
+    history.prepend(row);
+  }
+
+  function showOverlay(win) {
+    document.getElementById('overlay-title').textContent = win ? '🎉 正解！' : '😢 ゲームオーバー';
+    document.getElementById('overlay-msg').textContent   = win
+      ? `${tries}回で当てました！`
+      : `正解は… `;
+    document.getElementById('overlay-answer').textContent = secret.join(' ');
+    overlay.classList.add('show');
+    inputs.forEach(el => el.disabled = true);
+    guessBtn.disabled = true;
+  }
+
+  function onGuess() {
+    if (gameOver) return;
+    errorMsg.textContent = '';
+
+    const guess = getGuess();
+    const err   = validate(guess);
+    if (err) { errorMsg.textContent = err; return; }
+
+    tries++;
+    const { hit, blow } = judge(guess);
+    addHistory(guess, hit, blow);
+
+    if (hit === 4) {
+      gameOver = true;
+      showOverlay(true);
+      return;
+    }
+
+    if (tries >= MAX_TRIES) {
+      gameOver = true;
+      showOverlay(false);
+      return;
+    }
+
+    inputs.forEach(el => el.value = '');
+    inputs[0].focus();
+  }
+
+  // 1マス入力したら次へ自動移動
+  inputs.forEach((el, i) => {
+    el.addEventListener('input', () => {
+      el.value = el.value.replace(/[^0-9]/g, '').slice(-1);
+      if (el.value && i < 3) inputs[i + 1].focus();
+    });
+    el.addEventListener('keydown', e => {
+      if (e.key === 'Backspace' && !el.value && i > 0) inputs[i - 1].focus();
+      if (e.key === 'Enter') onGuess();
+    });
+  });
+
+  guessBtn.addEventListener('click', onGuess);
+  document.getElementById('retry-btn').addEventListener('click', startGame);
+
+  startGame();
+</script>
+</body>
+</html>
